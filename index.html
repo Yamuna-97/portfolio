@@ -264,9 +264,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
     <script>
         // ==================== SCENE SETUP ====================
@@ -291,19 +288,6 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowShadowMap;
         document.body.appendChild(renderer.domElement);
-
-        // Post-processing for bloom effect
-        const composer = new THREE.EffectComposer(renderer);
-        const renderPass = new THREE.RenderPass(scene, camera);
-        composer.addPass(renderPass);
-
-        const bloomPass = new THREE.UnrealBloomPass(
-            new THREE.Vector2(width, height),
-            1.5,  // strength
-            0.4,  // radius
-            0.85  // threshold
-        );
-        composer.addPass(bloomPass);
 
         // ==================== LIGHTING ====================
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
@@ -761,8 +745,8 @@
             document.getElementById('rotation-display').textContent = 
                 `${(spacecraft.rotation.y * 180 / Math.PI).toFixed(0)}°`;
 
-            // Render with bloom
-            composer.render();
+            // Render scene
+            renderer.render(scene, camera);
         }
 
         // ==================== HANDLE WINDOW RESIZE ====================
@@ -774,7 +758,6 @@
             camera.updateProjectionMatrix();
             
             renderer.setSize(newWidth, newHeight);
-            composer.setSize(newWidth, newHeight);
         });
 
         // Remove loading text and start animation
