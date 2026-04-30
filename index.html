@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Portfolio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlay */
+        #ui-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* HUD - Top Left */
+        #hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 120, 200, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px 20px;
+            color: #00d4ff;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            backdrop-filter: blur(10px);
+            z-index: 20;
+            pointer-events: auto;
+            min-width: 250px;
+        }
+
+        .hud-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hud-label {
+            color: #00d4ff;
+        }
+
+        .hud-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        /* Portfolio Content Overlay */
+        #portfolio-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 30, 60, 0.85);
+            border: 1px solid rgba(100, 200, 255, 0.5);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            max-height: 80vh;
+            color: #e0e0e0;
+            backdrop-filter: blur(20px);
+            z-index: 100;
+            pointer-events: auto;
+            display: none;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+
+        #portfolio-overlay.visible {
+            display: block;
+        }
+
+        #portfolio-overlay h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        #portfolio-overlay p, #portfolio-overlay li {
+            line-height: 1.6;
+            margin-bottom: 10px;
+            color: #c0c0c0;
+        }
+
+        #portfolio-overlay ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(200, 0, 0, 0.3);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            color: #ff6b6b;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+        }
+
+        .close-btn:hover {
+            background: rgba(200, 0, 0, 0.6);
+            color: #ff0000;
+        }
+
+        /* Instructions */
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(20, 120, 200, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px 20px;
+            color: #00d4ff;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+            z-index: 20;
+        }
+
+        #instructions p {
+            margin: 5px 0;
+            color: #c0c0c0;
+        }
+
+        /* Crosshair */
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(100, 200, 255, 0.4);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #crosshair::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 10px;
+            background: rgba(100, 200, 255, 0.4);
+        }
+
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 2px;
+            background: rgba(100, 200, 255, 0.4);
+        }
+
+        /* Scrollbar styling */
+        #portfolio-overlay::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #portfolio-overlay::-webkit-scrollbar-track {
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        #portfolio-overlay::-webkit-scrollbar-thumb {
+            background: rgba(100, 200, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        #portfolio-overlay::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 200, 255, 0.5);
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00d4ff;
+            font-size: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">Loading Solar System...</div>
+    
+    <div id="ui-container">
+        <div id="hud">
+            <div class="hud-item">
+                <span class="hud-label">POSITION:</span>
+                <span class="hud-value" id="pos-display">0, 0, 0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">TARGET:</span>
+                <span class="hud-value" id="target-display">Sun</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">DISTANCE:</span>
+                <span class="hud-value" id="distance-display">0.00</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">SPEED:</span>
+                <span class="hud-value" id="speed-display">0.00</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">ROTATION:</span>
+                <span class="hud-value" id="rotation-display">0°</span>
+            </div>
+        </div>
+
+        <div id="portfolio-overlay">
+            <button class="close-btn" onclick="closePortfolio()">×</button>
+            <div id="portfolio-content"></div>
+        </div>
+
+        <div id="crosshair"></div>
+
+        <div id="instructions">
+            <p><strong>CONTROLS:</strong></p>
+            <p>🖱️ Click planets to explore</p>
+            <p>⌨️ WASD to move</p>
+            <p>🖱️ Mouse to look</p>
+            <p>ESC to cancel</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+    <script>
+        // ==================== SCENE SETUP ====================
+        const scene = new THREE.Scene();
+        const canvas = document.querySelector('body');
+        
+        // Use window size
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100000);
+        camera.position.set(0, 30, 50);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // Post-processing for bloom effect
+        const composer = new THREE.EffectComposer(renderer);
+        const renderPass = new THREE.RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(width, height),
+            1.5,  // strength
+            0.4,  // radius
+            0.85  // threshold
+        );
+        composer.addPass(bloomPass);
+
+        // ==================== LIGHTING ====================
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.PointLight(0xffffff, 2, 500);
+        sunLight.position.set(0, 0, 0);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        scene.add(sunLight);
+
+        // ==================== FOG ====================
+        scene.fog = new THREE.Fog(0x000000, 500, 5000);
+
+        // ==================== PLANETS DATA ====================
+        const planetsData = [
+            { name: 'Mercury', size: 3.8, color: 0x8c7853, distance: 40, speed: 0.04, tilt: 0.01 },
+            { name: 'Venus', size: 9.5, color: 0xffc649, distance: 60, speed: 0.015, tilt: 177.36 },
+            { name: 'Earth', size: 10, color: 0x4a90e2, distance: 85, speed: 0.01, tilt: 23.44 },
+            { name: 'Mars', size: 5.3, color: 0xe27b58, distance: 110, speed: 0.008, tilt: 25.19 },
+            { name: 'Jupiter', size: 25, color: 0xd4a574, distance: 160, speed: 0.002, tilt: 3.13 },
+            { name: 'Saturn', size: 21, color: 0xf4d49f, distance: 210, speed: 0.0009, tilt: 26.73 },
+            { name: 'Uranus', size: 15.5, color: 0x4fd0e7, distance: 260, speed: 0.0004, tilt: 97.77 },
+            { name: 'Neptune', size: 15, color: 0x4166f5, distance: 310, speed: 0.0001, tilt: 28.32 }
+        ];
+
+        // ==================== PLANET CREATION ====================
+        const planets = [];
+        const planetMeshes = [];
+
+        function createPlanet(data) {
+            // Create orbit group
+            const orbitGroup = new THREE.Group();
+            scene.add(orbitGroup);
+
+            // Create planet mesh
+            const geometry = new THREE.IcosahedronGeometry(data.size, 32);
+            const material = new THREE.MeshStandardMaterial({
+                color: data.color,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const planetMesh = new THREE.Mesh(geometry, material);
+            planetMesh.castShadow = true;
+            planetMesh.receiveShadow = true;
+            planetMesh.rotation.x = THREE.MathUtils.degToRad(data.tilt);
+
+            // Position planet at orbit distance
+            planetMesh.position.x = data.distance;
+
+            // Add planet to orbit group
+            orbitGroup.add(planetMesh);
+
+            // Store data
+            const planetData = {
+                name: data.name,
+                mesh: planetMesh,
+                orbitGroup: orbitGroup,
+                size: data.size,
+                distance: data.distance,
+                speed: data.speed,
+                angle: Math.random() * Math.PI * 2,
+                tilt: data.tilt,
+                rotation: 0
+            };
+
+            planets.push(planetData);
+            planetMeshes.push(planetMesh);
+
+            return planetData;
+        }
+
+        // Create all planets
+        planetsData.forEach(data => createPlanet(data));
+
+        // ==================== SUN ====================
+        const sunGeometry = new THREE.IcosahedronGeometry(15, 32);
+        const sunMaterial = new THREE.MeshStandardMaterial({
+            color: 0xfdb813,
+            emissive: 0xfdb813,
+            emissiveIntensity: 1,
+            roughness: 0.2,
+            metalness: 0
+        });
+        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+        sun.castShadow = true;
+        sun.receiveShadow = true;
+        scene.add(sun);
+
+        let sunPulse = 0;
+
+        // ==================== SATURN RING ====================
+        const saturnPlanet = planets[5]; // Saturn
+        const ringGeometry = new THREE.RingGeometry(saturnPlanet.size * 1.8, saturnPlanet.size * 2.5, 64);
+        const ringMaterial = new THREE.MeshStandardMaterial({
+            color: 0xd4a574,
+            side: THREE.DoubleSide,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = THREE.MathUtils.degToRad(26.73);
+        ring.castShadow = true;
+        ring.receiveShadow = true;
+        saturnPlanet.mesh.add(ring);
+
+        // ==================== STARFIELD ====================
+        function createStarfield() {
+            const starCount = 10000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 8000;
+                positions[i + 1] = (Math.random() - 0.5) * 8000;
+                positions[i + 2] = (Math.random() - 0.5) * 8000;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 2,
+                sizeAttenuation: true
+            });
+
+            return new THREE.Points(geometry, material);
+        }
+
+        const starfield = createStarfield();
+        scene.add(starfield);
+
+        // ==================== SPACECRAFT ====================
+        const spacecraft = {
+            position: new THREE.Vector3(0, 20, 50),
+            targetPosition: new THREE.Vector3(0, 20, 50),
+            velocity: new THREE.Vector3(0, 0, 0),
+            speed: 0.5,
+            mesh: null,
+            rotation: new THREE.Euler(0, 0, 0),
+            targetRotation: new THREE.Euler(0, 0, 0),
+            moveDirection: new THREE.Vector3()
+        };
+
+        // Create spacecraft geometry (cone + cylinder)
+        function createSpacecraft() {
+            const group = new THREE.Group();
+
+            // Nose cone
+            const coneGeometry = new THREE.ConeGeometry(2, 8, 16);
+            const coneMaterial = new THREE.MeshStandardMaterial({
+                color: 0xff6b35,
+                emissive: 0xff6b35,
+                emissiveIntensity: 0.5,
+                roughness: 0.3,
+                metalness: 0.7
+            });
+            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            cone.position.z = 4;
+            cone.castShadow = true;
+            group.add(cone);
+
+            // Main body (cylinder)
+            const bodyGeometry = new THREE.CylinderGeometry(1.5, 1.5, 10, 16);
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2c3e50,
+                roughness: 0.5,
+                metalness: 0.6
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.castShadow = true;
+            group.add(body);
+
+            // Engine glow
+            const glowGeometry = new THREE.SphereGeometry(1, 16, 16);
+            const glowMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00ff00,
+                emissive: 0x00ff00,
+                emissiveIntensity: 2,
+                roughness: 0.2
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.z = -5;
+            glow.scale.z = 2;
+            group.add(glow);
+
+            return group;
+        }
+
+        spacecraft.mesh = createSpacecraft();
+        spacecraft.mesh.position.copy(spacecraft.position);
+        scene.add(spacecraft.mesh);
+
+        // ==================== PARTICLE TRAIL ====================
+        const trailParticles = [];
+        const maxTrailLength = 100;
+
+        function createTrailParticle() {
+            const geometry = new THREE.SphereGeometry(0.3, 8, 8);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x00ff00,
+                emissive: 0x00ff00,
+                emissiveIntensity: 1,
+                roughness: 0.3
+            });
+            const particle = new THREE.Mesh(geometry, material);
+            particle.position.copy(spacecraft.position);
+            scene.add(particle);
+
+            return {
+                mesh: particle,
+                life: 1,
+                maxLife: 1
+            };
+        }
+
+        function updateTrail() {
+            // Create new trail particle occasionally
+            if (Math.random() < 0.3) {
+                trailParticles.push(createTrailParticle());
+            }
+
+            // Update trail particles
+            for (let i = trailParticles.length - 1; i >= 0; i--) {
+                const particle = trailParticles[i];
+                particle.life -= 0.02;
+                particle.mesh.material.emissiveIntensity = particle.life * 2;
+                particle.mesh.scale.setScalar(particle.life);
+
+                if (particle.life <= 0) {
+                    scene.remove(particle.mesh);
+                    trailParticles.splice(i, 1);
+                }
+            }
+
+            // Limit trail length
+            while (trailParticles.length > maxTrailLength) {
+                const particle = trailParticles.shift();
+                scene.remove(particle.mesh);
+            }
+        }
+
+        // ==================== PORTFOLIO CONTENT ====================
+        const portfolioContent = {
+            Sun: {
+                title: 'About Me',
+                content: '<p>Welcome to my interactive solar system portfolio! I am a full-stack developer passionate about creating immersive web experiences using modern technologies like Three.js and WebGL.</p><p>This portfolio demonstrates my skills in:</p><ul><li>3D Graphics & WebGL</li><li>Interactive Physics Simulation</li><li>Performance Optimization</li><li>Creative Problem Solving</li></ul>'
+            },
+            Mercury: {
+                title: 'Skills',
+                content: '<h3>Technical Skills</h3><ul><li><strong>Frontend:</strong> React, Vue.js, Three.js, Babylon.js</li><li><strong>Backend:</strong> Node.js, Python, Express.js</li><li><strong>3D Graphics:</strong> WebGL, GLSL, Shader Programming</li><li><strong>Tools:</strong> Git, Docker, Webpack, Vite</li><li><strong>Languages:</strong> JavaScript, TypeScript, Python, C++, GLSL</li></ul>'
+            },
+            Venus: {
+                title: 'Education',
+                content: '<h3>Educational Background</h3><ul><li><strong>Bachelor of Science in Computer Science</strong> - University of Technology (2020)</li><li><strong>Advanced Web Development Certificate</strong> - Tech Academy (2021)</li><li><strong>3D Graphics Specialization</strong> - Coursera (2022)</li></ul><p>Continuous learner with focus on emerging technologies and creative coding.</p>'
+            },
+            Earth: {
+                title: 'Projects',
+                content: '<h3>Featured Projects</h3><ul><li><strong>Real-time 3D Visualization Engine</strong> - Built custom rendering pipeline using WebGL</li><li><strong>Interactive Data Dashboard</strong> - React with D3.js visualization</li><li><strong>VR Space Exploration App</strong> - Three.js with VR headset support</li><li><strong>Procedural Terrain Generator</strong> - Noise-based terrain with unlimited scalability</li></ul>'
+            },
+            Mars: {
+                title: 'Experience',
+                content: '<h3>Professional Experience</h3><ul><li><strong>Senior Developer</strong> - Tech Innovations Inc (2022-Present)<br>Leading development of 3D web applications and mentoring junior developers</li><li><strong>Full Stack Developer</strong> - Digital Solutions Ltd (2020-2022)<br>Developed responsive web applications and RESTful APIs</li><li><strong>Junior Web Developer</strong> - StartUp Labs (2019-2020)<br>Built frontend interfaces and improved application performance</li></ul>'
+            },
+            Jupiter: {
+                title: 'Achievements',
+                content: '<h3>Notable Achievements</h3><ul><li>🏆 Best Innovation Award - Global Tech Summit 2023</li><li>⭐ 50k+ GitHub Stars - Open Source Contribution</li><li>📊 Speaker - International Web Conferences (3 times)</li><li>🔧 Tech Lead - Successfully launched 10+ production projects</li><li>📈 Performance Expert - Reduced load times by 60%</li></ul>'
+            },
+            Saturn: {
+                title: 'Certifications',
+                content: '<h3>Professional Certifications</h3><ul><li><strong>AWS Certified Solutions Architect</strong> - Professional (2023)</li><li><strong>Google Cloud Certified Associate</strong> - Cloud Engineer (2023)</li><li><strong>Oracle Certified Associate Java Programmer</strong> - (2022)</li><li><strong>Kubernetes Certified Application Developer</strong> - CKAD (2022)</li><li><strong>Professional Scrum Master</strong> - PSM I (2021)</li></ul>'
+            },
+            Uranus: {
+                title: 'Research & Blog',
+                content: '<h3>Latest Research & Articles</h3><ul><li><strong>The Future of WebGPU</strong> - Exploring next-gen graphics on the web</li><li><strong>Optimizing 3D Performance</strong> - Best practices for WebGL applications</li><li><strong>Real-time Ray Tracing in Browsers</strong> - Technical deep dive</li><li><strong>Interactive Data Visualization</strong> - Creative approaches to data storytelling</li></ul><p>Published on Medium, Dev.to, and personal blog.</p>'
+            },
+            Neptune: {
+                title: 'Contact',
+                content: '<h3>Get In Touch</h3><ul><li><strong>Email:</strong> hello@example.com</li><li><strong>GitHub:</strong> github.com/yourprofile</li><li><strong>LinkedIn:</strong> linkedin.com/in/yourprofile</li><li><strong>Twitter:</strong> @yourhandle</li><li><strong>Portfolio:</strong> yourportfolio.com</li></ul><p>Feel free to reach out for collaborations, opportunities, or just to say hello!</p>'
+            }
+        };
+
+        // ==================== INTERACTION & RAYCASTING ====================
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let selectedPlanet = null;
+
+        window.addEventListener('click', (event) => {
+            if (event.target.id === 'portfolio-overlay' || event.classList?.contains('close-btn')) {
+                return;
+            }
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(planetMeshes);
+
+            if (intersects.length > 0) {
+                const clickedMesh = intersects[0].object;
+                const planetData = planets.find(p => p.mesh === clickedMesh);
+
+                if (planetData) {
+                    // Set target position above the planet
+                    const direction = clickedMesh.getWorldPosition(new THREE.Vector3()).normalize();
+                    spacecraft.targetPosition = direction.multiplyScalar(planetData.distance + planetData.size + 20);
+                    
+                    selectedPlanet = planetData.name;
+                    document.getElementById('target-display').textContent = planetData.name;
+                }
+            }
+        });
+
+        // Close portfolio overlay
+        function closePortfolio() {
+            document.getElementById('portfolio-overlay').classList.remove('visible');
+        }
+
+        // Show portfolio content
+        function showPortfolioContent(planetName) {
+            const content = portfolioContent[planetName];
+            if (content) {
+                document.getElementById('portfolio-content').innerHTML = `<h2>${content.title}</h2>${content.content}`;
+                document.getElementById('portfolio-overlay').classList.add('visible');
+            }
+        }
+
+        // ==================== KEYBOARD INPUT ====================
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === 'Escape') {
+                closePortfolio();
+                spacecraft.targetPosition.copy(spacecraft.position);
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // ==================== SPACECRAFT MOVEMENT ====================
+        function updateSpacecraft() {
+            // Calculate direction to target
+            const direction = new THREE.Vector3();
+            direction.subVectors(spacecraft.targetPosition, spacecraft.position);
+            const distance = direction.length();
+
+            // Move towards target
+            if (distance > 1) {
+                direction.normalize();
+                
+                // Keyboard input
+                const moveDirection = new THREE.Vector3();
+                if (keys['w']) moveDirection.z -= 1;
+                if (keys['s']) moveDirection.z += 1;
+                if (keys['a']) moveDirection.x -= 1;
+                if (keys['d']) moveDirection.x += 1;
+
+                if (moveDirection.length() > 0) {
+                    moveDirection.normalize();
+                    direction.addScaledVector(moveDirection, 0.5);
+                    direction.normalize();
+                }
+
+                spacecraft.velocity.lerp(direction.multiplyScalar(spacecraft.speed), 0.1);
+                spacecraft.position.addScaledVector(spacecraft.velocity, 1);
+            } else {
+                spacecraft.velocity.lerp(new THREE.Vector3(0, 0, 0), 0.1);
+            }
+
+            // Rotate spacecraft to face direction
+            if (spacecraft.velocity.length() > 0.01) {
+                const targetRotation = new THREE.Euler();
+                targetRotation.setFromVector3(spacecraft.velocity);
+                spacecraft.rotation.x = THREE.MathUtils.lerp(spacecraft.rotation.x, targetRotation.x, 0.1);
+                spacecraft.rotation.y = THREE.MathUtils.lerp(spacecraft.rotation.y, targetRotation.y, 0.1);
+                spacecraft.rotation.z = THREE.MathUtils.lerp(spacecraft.rotation.z, targetRotation.z, 0.1);
+            }
+
+            spacecraft.mesh.position.copy(spacecraft.position);
+            spacecraft.mesh.rotation.copy(spacecraft.rotation);
+
+            // Check if reached planet
+            if (selectedPlanet && selectedPlanet !== 'Sun') {
+                const planetData = planets.find(p => p.name === selectedPlanet);
+                if (planetData) {
+                    const planetPos = planetData.mesh.getWorldPosition(new THREE.Vector3());
+                    if (spacecraft.position.distanceTo(planetPos) < planetData.size + 30) {
+                        showPortfolioContent(selectedPlanet);
+                        selectedPlanet = null;
+                    }
+                }
+            }
+        }
+
+        // ==================== CAMERA SYSTEM ====================
+        function updateCamera() {
+            // Offset behind spacecraft
+            const cameraOffset = new THREE.Vector3(0, 15, 25);
+            cameraOffset.applyQuaternion(spacecraft.mesh.quaternion);
+            
+            const targetCameraPos = spacecraft.position.clone().add(cameraOffset);
+            camera.position.lerp(targetCameraPos, 0.1);
+            
+            // Look slightly ahead
+            const lookAhead = spacecraft.position.clone().addScaledVector(spacecraft.velocity, 30);
+            camera.lookAt(lookAhead);
+        }
+
+        // ==================== ANIMATION LOOP ====================
+        function updatePlanets(deltaTime) {
+            planets.forEach((planet, index) => {
+                // Orbital motion
+                planet.angle += planet.speed;
+                planet.orbitGroup.rotation.y = planet.angle;
+
+                // Self rotation
+                planet.mesh.rotation.z += 0.001 + (planet.speed * 0.1);
+
+                // Hover effect
+                const scale = 1 + Math.sin(planet.angle * 5) * 0.05;
+                planet.mesh.scale.setScalar(scale);
+            });
+
+            // Sun pulsing animation
+            sunPulse += 0.01;
+            sun.scale.setScalar(1 + Math.sin(sunPulse) * 0.1);
+            sun.material.emissiveIntensity = 1 + Math.sin(sunPulse * 2) * 0.3;
+        }
+
+        let lastTime = Date.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const currentTime = Date.now();
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            // Update everything
+            updatePlanets(deltaTime);
+            updateSpacecraft();
+            updateTrail();
+            updateCamera();
+
+            // Update HUD
+            document.getElementById('pos-display').textContent = 
+                `${spacecraft.position.x.toFixed(0)}, ${spacecraft.position.y.toFixed(0)}, ${spacecraft.position.z.toFixed(0)}`;
+            document.getElementById('distance-display').textContent = 
+                `${spacecraft.position.distanceTo(spacecraft.targetPosition).toFixed(2)}`;
+            document.getElementById('speed-display').textContent = 
+                `${spacecraft.velocity.length().toFixed(2)}`;
+            document.getElementById('rotation-display').textContent = 
+                `${(spacecraft.rotation.y * 180 / Math.PI).toFixed(0)}°`;
+
+            // Render with bloom
+            composer.render();
+        }
+
+        // ==================== HANDLE WINDOW RESIZE ====================
+        window.addEventListener('resize', () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+            
+            camera.aspect = newWidth / newHeight;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(newWidth, newHeight);
+            composer.setSize(newWidth, newHeight);
+        });
+
+        // Remove loading text and start animation
+        document.querySelector('.loading').remove();
+        animate();
+
+        // Start at sun
+        spacecraft.targetPosition.set(0, 0, 0);
+    </script>
+</body>
+</html>
