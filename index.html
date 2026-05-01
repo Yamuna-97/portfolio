@@ -1079,8 +1079,8 @@ const flares = [new Flare(), new Flare(), new Flare(), new Flare()];
 // MERCURY PLANET
 // ════════════════════════════════════════════
 const MERCURY_ORBIT_RADIUS = 65;   // distance from sun
-const MERCURY_ORBIT_SPEED  = 0.18; // radians/sec (slow)
-const MERCURY_SIZE         = 2.2;  // ~1/10 of sun (sun=22)
+const MERCURY_ORBIT_SPEED  = 0.06; // radians/sec (slow)
+const MERCURY_SIZE         = 3.5;  // ~1/10 of sun (sun=22)
 const MERCURY_ENTRY_DIST   = 8;    // proximity to trigger panel
 
 // Procedural rocky texture via canvas
@@ -1207,7 +1207,7 @@ function updateMercuryOrbit(dt) {
   const z = sunMesh.position.z + Math.sin(mercuryAngle) * MERCURY_ORBIT_RADIUS;
   mercuryGroup.position.set(x, sunMesh.position.y, z);
   // Self-rotation
-  mercuryMesh.rotation.y += dt * 0.3;
+  mercuryMesh.rotation.y += dt * 0.08;
   // Pulse atmosphere
   mercAtmoMat.opacity = 0.10 + Math.sin(mercuryAngle*2.1)*0.04;
 }
@@ -1652,7 +1652,7 @@ function animate() {
   // ── SUN ANIMATION ──
   sunMat.uniforms.uTime.value = t;
   sunMat.uniforms.uGlow.value = 0.5 + Math.sin(t*1.4)*0.5;
-  sunMesh.rotation.y += delta * 0.014;
+  sunMesh.rotation.y += delta * 0.005;
   sunLight.intensity = 3.5 + Math.sin(t*7.8)*0.4 + Math.sin(t*3.1)*0.25;
   coronas.forEach((c,i) => {
     c.material.opacity = (c.material.opacity * 0.97) + ((0.03 + i*0.02 + Math.sin(t*(0.8+i*0.15))*0.01) * 0.03);
